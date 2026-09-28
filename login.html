@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relay — Log in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg: #eef1f8;
+  --white: #ffffff;
+  --pill: #9a9ea8;
+  --pill-dark: #82858f;
+  --card: #90939c;
+  --card-dark: #7c7f88;
+  --row: #f3f4f7;
+  --line: #e2e4ea;
+  --text: #1f2330;
+  --muted: #666a76;
+  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:inherit;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  min-height:100%;
+}
+a{color:inherit;text-decoration:none;}
+
+.topbar{
+  height:6px;
+  width:100%;
+  background:var(--grad);
+  position:sticky;top:0;z-index:30;
+  padding-top:env(safe-area-inset-top,0px);
+  background-clip:padding-box;
+}
+
+.wrap{max-width:980px;margin:36px auto 60px;padding:0 20px;}
+
+.panel{
+  background:var(--white);
+  border-radius:22px;
+  box-shadow:0 14px 40px rgba(30,41,59,.10);
+  padding:30px 32px 34px;
+}
+
+.nav-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:26px;}
+.search{
+  flex:1 1 220px;
+  min-width:150px;
+  background:var(--row);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:12px 44px 12px 18px;
+  font-size:13.5px;
+  color:var(--muted);
+  position:relative;
+  display:flex;align-items:center;
+}
+.search input{border:none;background:none;outline:none;font-size:13.5px;color:var(--text);width:100%;font-family:inherit;}
+.search svg{position:absolute;right:16px;width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2;}
+
+.pill-nav{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{
+  background:var(--pill);
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  padding:11px 18px;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:filter .15s, transform .1s;
+}
+.pill:hover{filter:brightness(.94);}
+.pill.active{background:var(--grad);}
+
+.title-pill{
+  display:block;
+  width:max-content;
+  margin:0 auto 26px;
+  background:var(--pill);
+  color:#fff;
+  font-weight:600;
+  font-size:13.5px;
+  border-radius:12px;
+  padding:12px 30px;
+  text-align:center;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+}
+@media (max-width:760px){ .grid{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:460px){ .grid{grid-template-columns:1fr;} }
+
+.vcard{
+  background:var(--card);
+  border-radius:14px;
+  aspect-ratio:9/14;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding-top:38%;
+  overflow:hidden;
+  cursor:pointer;
+}
+.vcard:hover{background:var(--card-dark);}
+.play{
+  width:38px;height:38px;border-radius:50%;
+  background:#14151a;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;
+}
+.play svg{width:14px;height:14px;fill:#fff;}
+.vcard .label{color:#f2f3f5;font-size:12px;font-weight:500;padding:0 10px;text-align:center;}
+.vcard .who{position:absolute;bottom:12px;left:12px;right:12px;color:#fff;font-size:11.5px;opacity:.9;}
+
+.pcard{
+  background:var(--card);
+  border-radius:14px;
+  padding:16px;
+  color:#fff;
+}
+.pcard .head{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+.pcard .avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none;}
+.pcard .name{font-size:13px;font-weight:600;}
+.pcard .meta{font-size:11px;opacity:.8;}
+.pcard .body{font-size:13px;line-height:1.5;opacity:.95;}
+.pcard .actions{display:flex;gap:8px;margin-top:14px;}
+.pcard .actions button{background:rgba(255,255,255,.18);border:none;border-radius:999px;color:#fff;font-size:11.5px;font-weight:600;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.pcard .actions button.on{background:#fff;color:var(--text);}
+
+.row-list{display:flex;flex-direction:column;gap:10px;}
+.row{
+  background:var(--row);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+}
+.row .avatar{width:40px;height:40px;border-radius:12px;background:var(--card);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none;}
+.row.round .avatar{border-radius:50%;}
+.row .info{min-width:0;flex:1;}
+.row .info .t1{font-weight:600;font-size:13.5px;}
+.row .info .t2{color:var(--muted);font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.row .side{flex:none;display:flex;align-items:center;gap:8px;}
+.btn{border:none;border-radius:999px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;}
+.btn-grad{background:var(--grad);color:#fff;}
+.btn-flat{background:var(--pill);color:#fff;}
+.btn-outline{background:none;border:1px solid var(--line);color:var(--text);}
+
+.section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:22px 0 10px;}
+.section-title:first-child{margin-top:0;}
+
+.poll{background:var(--row);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:14px;}
+.poll .q{font-weight:700;font-size:14px;margin-bottom:14px;}
+.popt{position:relative;border-radius:10px;overflow:hidden;background:#e6e8ee;padding:10px 14px;margin-bottom:8px;cursor:pointer;}
+.popt .fill{position:absolute;inset:0;background:var(--grad);opacity:.85;width:0;transition:width .4s;}
+.popt.voted .fill{opacity:1;}
+.popt .r{position:relative;display:flex;justify-content:space-between;font-size:13px;font-weight:600;}
+.popt.voted .r{color:#fff;}
+
+.profile-top{display:flex;gap:18px;align-items:center;margin-bottom:24px;flex-wrap:wrap;}
+.profile-top .avatar{width:72px;height:72px;border-radius:20px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex:none;}
+.profile-top h2{margin:0;font-size:19px;}
+.profile-top .handle{color:var(--muted);font-size:13px;margin-top:2px;}
+.stats{display:flex;gap:26px;margin-top:12px;}
+.stats b{display:block;font-size:16px;}
+.stats span{color:var(--muted);font-size:11.5px;}
+
+.toggle{width:38px;height:22px;border-radius:999px;background:var(--pill);position:relative;cursor:pointer;flex:none;}
+.toggle.on{background:var(--grad);}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;}
+.toggle.on::after{transform:translateX(16px);}
+
+.note{background:#eef2ff;border:1px solid #dbe2fb;color:#3546a3;border-radius:14px;padding:14px 16px;font-size:12.5px;margin-bottom:22px;}
+.empty-state{
+  text-align:center;
+  padding:60px 20px;
+  color:var(--muted);
+}
+.empty-state p{font-size:15px;font-weight:600;color:var(--text);margin:0 0 6px;}
+.empty-state span{font-size:12.5px;}
+
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1117; --white:#181b25; --pill:#4b5061; --pill-dark:#3d4252;
+  --card:#343948; --card-dark:#2b3040; --row:#212533; --line:#2f3444;
+  --text:#eceef4; --muted:#9aa1b3;
+}
+[data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
+[data-theme="dark"] .popt{background:#2a2f3f;}
+[data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+
+.auth{max-width:400px;margin:0 auto;}
+.auth-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:22px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+.field input{
+  width:100%;background:var(--row);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit;outline:none;
+}
+.field input:focus{border-color:#8b5cf6;}
+.auth .btn{width:100%;padding:12px 16px;font-size:14px;margin-top:6px;}
+.auth .btn:disabled{opacity:.6;cursor:default;}
+.error{display:none;background:#fdecef;border:1px solid #f6c4cd;color:#b4233c;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;}
+[data-theme="dark"] .error{background:#3a1a22;border-color:#5c2733;color:#ff9db0;}
+.hidden{display:none;}
+
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="wrap">
+  <div class="panel">
+    <div class="title-pill">welcome to relay</div>
+    <div class="auth">
+      <div class="auth-tabs">
+        <button class="pill active" id="tab-login" type="button">Log in</button>
+        <button class="pill" id="tab-signup" type="button">Sign up</button>
+      </div>
+
+      <div class="error" id="error"></div>
+
+      <div class="field hidden" id="f-display">
+        <label for="displayName">Display name</label>
+        <input id="displayName" type="text" autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username">
+      </div>
+      <div class="field hidden" id="f-email">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-grad" id="submit" type="button">Log in</button>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+var mode = 'login';
+var $ = function(id){ return document.getElementById(id); };
+
+function setMode(m) {
+  mode = m;
+  var signup = m === 'signup';
+  $('tab-login').classList.toggle('active', !signup);
+  $('tab-signup').classList.toggle('active', signup);
+  $('f-display').classList.toggle('hidden', !signup);
+  $('f-email').classList.toggle('hidden', !signup);
+  $('password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
+  $('submit').textContent = signup ? 'Create account' : 'Log in';
+  showError('');
+}
+
+function showError(msg) {
+  var el = $('error');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+async function submit() {
+  var username = $('username').value.trim();
+  var password = $('password').value;
+  if (!username || !password) return showError('Enter a username and password.');
+
+  var body = { username: username, password: password };
+  var path = '/auth/login';
+
+  if (mode === 'signup') {
+    body.displayName = $('displayName').value.trim();
+    body.email = $('email').value.trim();
+    if (!body.displayName || !body.email) return showError('Fill in every field.');
+    if (password.length < 8) return showError('Password must be at least 8 characters.');
+    path = '/auth/register';
+  }
+
+  $('submit').disabled = true;
+  showError('');
+  try {
+    await api(path, { method: 'POST', body: body });
+    window.location.href = 'index.html';
+  } catch (err) {
+    var msg = err.message === 'Failed to fetch'
+      ? "Can't reach the server. Is it running, and does CORS_ORIGINS include this page's address?"
+      : err.message;
+    showError(msg);
+    $('submit').disabled = false;
+  }
+}
+
+$('tab-login').addEventListener('click', function(){ setMode('login'); });
+$('tab-signup').addEventListener('click', function(){ setMode('signup'); });
+$('submit').addEventListener('click', submit);
+document.addEventListener('keydown', function(e){ if (e.key === 'Enter') submit(); });
+
+// Already logged in? Skip straight to the feed.
+api('/auth/me').then(function(){ window.location.href = 'index.html'; }).catch(function(){});
+</script>
+</body>
+</html>
