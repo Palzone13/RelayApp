@@ -189,6 +189,16 @@ a{color:inherit;text-decoration:none;}
 .toggle.on::after{transform:translateX(16px);}
 
 .note{background:#eef2ff;border:1px solid #dbe2fb;color:#3546a3;border-radius:14px;padding:14px 16px;font-size:12.5px;margin-bottom:22px;}
+.error{display:none;background:#fdecef;border:1px solid #f6c4cd;color:#b4233c;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;}
+[data-theme="dark"] .error{background:#3a1a22;border-color:#5c2733;color:#ff9db0;}
+.new-poll-form{background:var(--row);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;display:none;}
+.new-poll-form.open{display:block;}
+.new-poll-form input{width:100%;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;margin-bottom:8px;}
+.new-poll-form input:focus{border-color:#8b5cf6;}
+.opt-row{display:flex;gap:6px;}
+.opt-row input{flex:1;}
+.opt-row button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 6px;}
+.add-opt{background:none;border:1px dashed var(--line);color:var(--muted);border-radius:10px;padding:8px;width:100%;font-size:12.5px;cursor:pointer;margin-bottom:12px;font-family:inherit;}
 .empty-state{
   text-align:center;
   padding:60px 20px;
@@ -210,6 +220,10 @@ a{color:inherit;text-decoration:none;}
 </style>
 </head>
 <body>
+<script src="api.js"></script>
+<script>
+api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
+</script>
 <div class="topbar"></div>
 <div class="wrap">
   <div class="panel">
@@ -228,12 +242,102 @@ a{color:inherit;text-decoration:none;}
       <a class="pill" href="settings.html">Settings</a>
     </div>
     <div class="title-pill">polls</div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;"><button class="btn btn-grad">New poll</button></div>
-    <div class="empty-state">
-      <p>No polls yet.</p>
-      <span>Polls you or people you follow create will show up here.</span>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:14px;"><button class="btn btn-grad" id="toggle-form">New poll</button></div>
+
+    <div class="new-poll-form" id="new-poll-form">
+      <input id="poll-question" placeholder="Ask a question">
+      <div id="opt-rows">
+        <div class="opt-row"><input class="opt-input" placeholder="Option 1"></div>
+        <div class="opt-row"><input class="opt-input" placeholder="Option 2"></div>
+      </div>
+      <button class="add-opt" id="add-opt" type="button">+ Add option</button>
+      <div id="poll-error" class="error"></div>
+      <button class="btn btn-grad" id="create-poll-btn">Post poll</button>
     </div>
+
+    <div id="polls-content"><div class="empty-state"><p>Loading&hellip;</p></div></div>
   </div>
 </div>
+
+<script>
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+document.getElementById('toggle-form').addEventListener('click', function() {
+  document.getElementById('new-poll-form').classList.toggle('open');
+});
+
+document.getElementById('add-opt').addEventListener('click', function() {
+  var rows = document.getElementById('opt-rows');
+  if (rows.children.length >= 6) return;
+  var row = document.createElement('div');
+  row.className = 'opt-row';
+  row.innerHTML = '<input class="opt-input" placeholder="Option ' + (rows.children.length + 1) + '"><button type="button">&times;</button>';
+  row.querySelector('button').addEventListener('click', function() { row.remove(); });
+  rows.appendChild(row);
+});
+
+document.getElementById('create-poll-btn').addEventListener('click', async function() {
+  var question = document.getElementById('poll-question').value.trim();
+  var options = Array.prototype.map.call(document.querySelectorAll('.opt-input'), function(i){ return i.value.trim(); }).filter(Boolean);
+  var errEl = document.getElementById('poll-error');
+  errEl.style.display = 'none';
+
+  if (!question) { errEl.textContent = 'Add a question.'; errEl.style.display = 'block'; return; }
+  if (options.length < 2) { errEl.textContent = 'Add at least 2 options.'; errEl.style.display = 'block'; return; }
+
+  try {
+    await api('/polls', { method: 'POST', body: { question: question, options: options } });
+    document.getElementById('poll-question').value = '';
+    document.getElementById('opt-rows').innerHTML =
+      '<div class="opt-row"><input class="opt-input" placeholder="Option 1"></div><div class="opt-row"><input class="opt-input" placeholder="Option 2"></div>';
+    document.getElementById('new-poll-form').classList.remove('open');
+    loadPolls();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+});
+
+async function loadPolls() {
+  var container = document.getElementById('polls-content');
+  var polls = (await api('/polls')).polls;
+
+  if (polls.length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>No polls yet.</p><span>Polls you or people you follow create will show up here.</span></div>';
+    return;
+  }
+
+  container.innerHTML = polls.map(function(poll) {
+    var total = poll.options.reduce(function(sum, o){ return sum + Number(o.votes); }, 0);
+    var opts = poll.options.map(function(o) {
+      var pct = total > 0 ? Math.round((o.votes / total) * 100) : 0;
+      var voted = poll.myVote === o.id;
+      return '<div class="popt' + (voted ? ' voted' : '') + '" data-poll-id="' + poll.id + '" data-option-id="' + o.id + '">' +
+        '<div class="fill" style="width:' + pct + '%"></div>' +
+        '<div class="r"><span>' + escapeHtml(o.label) + '</span><span>' + pct + '%</span></div>' +
+      '</div>';
+    }).join('');
+    return '<div class="poll"><div class="q">' + escapeHtml(poll.question) + '</div>' + opts +
+      '<div style="font-size:11px;color:var(--muted);margin-top:6px;">by ' + escapeHtml(poll.display_name) + ' &middot; ' + total + ' vote' + (total === 1 ? '' : 's') + '</div></div>';
+  }).join('');
+
+  container.querySelectorAll('.popt').forEach(function(el) {
+    el.addEventListener('click', async function() {
+      try {
+        await api('/polls/' + el.dataset.pollId + '/vote', { method: 'POST', body: { optionId: el.dataset.optionId } });
+        loadPolls();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+}
+
+loadPolls();
+</script>
 </body>
 </html>
