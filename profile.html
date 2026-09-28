@@ -210,6 +210,10 @@ a{color:inherit;text-decoration:none;}
 </style>
 </head>
 <body>
+<script src="api.js"></script>
+<script>
+api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
+</script>
 <div class="topbar"></div>
 <div class="wrap">
   <div class="panel">
@@ -228,14 +232,67 @@ a{color:inherit;text-decoration:none;}
       <a class="pill" href="settings.html">Settings</a>
     </div>
     <div class="title-pill">profile</div>
-    
-    <div class="empty-state">
-      <p>You don't have a profile.</p>
-      <span>Make a profile to view it here.</span>
-      <div style="margin-top:16px;"><button class="btn btn-grad">Create profile</button></div>
+
+    <div id="profile-content">
+      <div class="empty-state"><p>Loading&hellip;</p></div>
     </div>
 
   </div>
 </div>
+
+<script>
+function initials(name) {
+  return (name || '?').split(' ').map(function(w){ return w[0]; }).join('').slice(0, 2).toUpperCase();
+}
+
+async function loadProfile() {
+  var container = document.getElementById('profile-content');
+  try {
+    var me = (await api('/auth/me')).user;
+    var full = await api('/users/' + me.username);
+    var stats = full.stats;
+
+    container.innerHTML =
+      '<div class="profile-top">' +
+        '<div class="avatar">' + initials(me.display_name) + '</div>' +
+        '<div>' +
+          '<h2>' + me.display_name + '</h2>' +
+          '<div class="handle">@' + me.username + '</div>' +
+          (me.bio ? '<p style="margin:10px 0 0;font-size:13.3px;">' + me.bio + '</p>' : '') +
+          '<div class="stats">' +
+            '<div><b>' + stats.posts + '</b><span>Posts</span></div>' +
+            '<div><b>' + stats.friends + '</b><span>Friends</span></div>' +
+            '<div><b>' + stats.followers + '</b><span>Followers</span></div>' +
+            '<div><b>' + stats.following + '</b><span>Following</span></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-title">Recent posts</div>' +
+      '<div id="profile-posts"><div class="empty-state"><p>Loading&hellip;</p></div></div>';
+
+    var feed = await api('/posts/feed');
+    var mine = feed.posts.filter(function(p){ return p.user_id === me.id; });
+    var postsEl = document.getElementById('profile-posts');
+
+    if (mine.length === 0) {
+      postsEl.innerHTML = '<div class="empty-state"><p>No posts yet.</p><span>Posts you make will show up here.</span></div>';
+      return;
+    }
+
+    postsEl.innerHTML = '<div class="grid">' + mine.map(function(p){
+      return '<div class="pcard">' +
+        '<div class="head"><div class="avatar">' + initials(me.display_name) + '</div>' +
+        '<div><div class="name">' + me.display_name + '</div><div class="meta">' +
+        new Date(p.created_at).toLocaleDateString() + '</div></div></div>' +
+        '<div class="body">' + (p.body || '') + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  } catch (err) {
+    container.innerHTML = '<div class="empty-state"><p>Couldn\u2019t load your profile.</p><span>' + err.message + '</span></div>';
+  }
+}
+
+loadProfile();
+</script>
 </body>
 </html>
