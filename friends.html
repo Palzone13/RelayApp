@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Friends</title>
+<title>PalTube — Friends</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -189,6 +189,11 @@ a{color:inherit;text-decoration:none;}
 .toggle.on::after{transform:translateX(16px);}
 
 .note{background:#eef2ff;border:1px solid #dbe2fb;color:#3546a3;border-radius:14px;padding:14px 16px;font-size:12.5px;margin-bottom:22px;}
+.error{display:none;background:#fdecef;border:1px solid #f6c4cd;color:#b4233c;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;}
+[data-theme="dark"] .error{background:#3a1a22;border-color:#5c2733;color:#ff9db0;}
+.compose-dm{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.compose-dm input{flex:1 1 180px;background:var(--row);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;}
+.compose-dm input:focus{border-color:#8b5cf6;}
 .empty-state{
   text-align:center;
   padding:60px 20px;
@@ -207,15 +212,24 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
 [data-theme="dark"] .popt{background:#2a2f3f;}
 [data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
+<script src="api.js"></script>
+<script>
+api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
+</script>
 <div class="topbar"></div>
 <div class="wrap">
   <div class="panel">
     <div class="nav-row">
+      <div class="brand-mark"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
       <label class="search">
-        <input type="text" placeholder="Search Relay">
+        <input type="text" placeholder="Search PalTube">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </label>
       <a class="pill" href="index.html">Feed</a>
@@ -228,17 +242,103 @@ a{color:inherit;text-decoration:none;}
       <a class="pill" href="settings.html">Settings</a>
     </div>
     <div class="title-pill">friends</div>
-    <div class="section-title">Friends</div>
-    <div class="empty-state">
-      <p>No friends yet.</p>
-      <span>People you add will show up here.</span>
+
+    <div class="compose-dm">
+      <input id="add-username" placeholder="Username to add">
+      <button class="btn btn-grad" id="add-btn">Add friend</button>
     </div>
+    <div id="add-error" class="error"></div>
+
     <div class="section-title">Requests</div>
-    <div class="empty-state">
-      <p>No requests.</p>
-      <span>Friend requests you receive will show up here.</span>
-    </div>
+    <div id="requests-content"><div class="empty-state"><p>Loading&hellip;</p></div></div>
+
+    <div class="section-title">Friends</div>
+    <div id="friends-content"><div class="empty-state"><p>Loading&hellip;</p></div></div>
   </div>
 </div>
+
+<script>
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function initials(name) {
+  return (name || '?').split(' ').map(function(w){ return w[0]; }).join('').slice(0, 2).toUpperCase();
+}
+
+document.getElementById('add-btn').addEventListener('click', async function() {
+  var username = document.getElementById('add-username').value.trim().toLowerCase();
+  var errEl = document.getElementById('add-error');
+  errEl.style.display = 'none';
+  if (!username) { errEl.textContent = 'Enter a username.'; errEl.style.display = 'block'; return; }
+
+  try {
+    var user = (await api('/users/' + username)).user;
+    await api('/friends/request/' + user.id, { method: 'POST' });
+    document.getElementById('add-username').value = '';
+    errEl.style.display = 'none';
+    loadFriends();
+  } catch (err) {
+    errEl.textContent = err.message.indexOf('No profile') !== -1 ? "Couldn't find that username." : err.message;
+    errEl.style.display = 'block';
+  }
+});
+
+async function loadFriends() {
+  var reqEl = document.getElementById('requests-content');
+  var friendsEl = document.getElementById('friends-content');
+
+  var requests = (await api('/friends/requests')).requests;
+  reqEl.innerHTML = requests.length === 0
+    ? '<div class="empty-state"><p>No requests.</p><span>Friend requests you receive will show up here.</span></div>'
+    : '<div class="row-list">' + requests.map(function(u) {
+        return '<div class="row round" data-user-id="' + u.id + '">' +
+          avatarHtml(u, 40) +
+          '<div class="info"><div class="t1">' + escapeHtml(u.display_name) + '</div><div class="t2">@' + escapeHtml(u.username) + '</div></div>' +
+          '<div class="side"><button class="btn btn-grad accept-btn">Accept</button> <button class="btn btn-outline decline-btn">Decline</button></div>' +
+        '</div>';
+      }).join('') + '</div>';
+
+  reqEl.querySelectorAll('.accept-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = btn.closest('[data-user-id]').dataset.userId;
+      await api('/friends/accept/' + id, { method: 'POST' });
+      loadFriends();
+    });
+  });
+  reqEl.querySelectorAll('.decline-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = btn.closest('[data-user-id]').dataset.userId;
+      await api('/friends/' + id, { method: 'DELETE' });
+      loadFriends();
+    });
+  });
+
+  var friends = (await api('/friends')).friends;
+  friendsEl.innerHTML = friends.length === 0
+    ? '<div class="empty-state"><p>No friends yet.</p><span>People you add will show up here.</span></div>'
+    : '<div class="row-list">' + friends.map(function(u) {
+        return '<div class="row round" data-user-id="' + u.id + '">' +
+          avatarHtml(u, 40) +
+          '<div class="info"><div class="t1">' + escapeHtml(u.display_name) + '</div><div class="t2">@' + escapeHtml(u.username) + '</div></div>' +
+          '<div class="side">' +
+            '<a class="btn btn-outline" href="dms.html?with=' + encodeURIComponent(u.username) + '" style="text-decoration:none;">Message</a> ' +
+            '<button class="btn btn-outline unfriend-btn">Unfriend</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+
+  friendsEl.querySelectorAll('.unfriend-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = btn.closest('[data-user-id]').dataset.userId;
+      await api('/friends/' + id, { method: 'DELETE' });
+      loadFriends();
+    });
+  });
+}
+
+loadFriends();
+</script>
 </body>
 </html>
