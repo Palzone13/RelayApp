@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Log in</title>
+<title>PalTube — Log in</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -223,13 +223,18 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .error{background:#3a1a22;border-color:#5c2733;color:#ff9db0;}
 .hidden{display:none;}
 
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
 <div class="topbar"></div>
 <div class="wrap">
   <div class="panel">
-    <div class="title-pill">welcome to relay</div>
+    <div class="brand-mark" style="justify-content:center;margin-bottom:16px;"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
+      <div class="title-pill">welcome to paltube</div>
     <div class="auth">
       <div class="auth-tabs">
         <button class="pill active" id="tab-login" type="button">Log in</button>
