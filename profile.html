@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Profile</title>
+<title>PalTube — Profile</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -177,9 +177,27 @@ a{color:inherit;text-decoration:none;}
 
 .profile-top{display:flex;gap:18px;align-items:center;margin-bottom:24px;flex-wrap:wrap;}
 .profile-top .avatar{width:72px;height:72px;border-radius:20px;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;flex:none;}
+.avatar-wrap{position:relative;flex:none;}
+.avatar-wrap img{width:72px;height:72px;border-radius:20px;object-fit:cover;display:block;}
+.avatar-edit{position:absolute;inset:0;background:rgba(0,0,0,.5);border-radius:20px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;opacity:0;cursor:pointer;transition:opacity .15s;}
+.avatar-wrap:hover .avatar-edit{opacity:1;}
+.profile-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
 .profile-top h2{margin:0;font-size:19px;}
 .profile-top .handle{color:var(--muted);font-size:13px;margin-top:2px;}
 .stats{display:flex;gap:26px;margin-top:12px;}
+.stats .stat-btn{background:none;border:none;padding:0;cursor:pointer;text-align:left;font-family:inherit;}
+.stats .stat-btn:hover b{text-decoration:underline;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.modal-backdrop.open{display:flex;}
+.modal-box{background:var(--white);border-radius:16px;padding:18px;width:100%;max-width:380px;max-height:70vh;display:flex;flex-direction:column;}
+.modal-box .mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.modal-box .mhead h3{margin:0;font-size:15px;}
+.modal-box .mclose{background:var(--pill);color:#fff;border:none;border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:14px;}
+.modal-box .mlist{overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.modal-box .mrow{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;padding:6px;border-radius:10px;}
+.modal-box .mrow:hover{background:var(--row);}
+.modal-box .mrow .mname{font-size:13.3px;font-weight:600;}
+.modal-box .mrow .mhandle{font-size:11.5px;color:var(--muted);}
 .stats b{display:block;font-size:16px;}
 .stats span{color:var(--muted);font-size:11.5px;}
 
@@ -207,6 +225,10 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
 [data-theme="dark"] .popt{background:#2a2f3f;}
 [data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
@@ -218,8 +240,9 @@ api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
 <div class="wrap">
   <div class="panel">
     <div class="nav-row">
+      <div class="brand-mark"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
       <label class="search">
-        <input type="text" placeholder="Search Relay">
+        <input type="text" placeholder="Search PalTube">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </label>
       <a class="pill" href="index.html">Feed</a>
@@ -240,39 +263,123 @@ api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
   </div>
 </div>
 
+<div class="modal-backdrop" id="list-modal">
+  <div class="modal-box">
+    <div class="mhead"><h3 id="modal-title"></h3><button class="mclose" id="modal-close">&times;</button></div>
+    <div class="mlist" id="modal-list"></div>
+  </div>
+</div>
+
 <script>
-function initials(name) {
-  return (name || '?').split(' ').map(function(w){ return w[0]; }).join('').slice(0, 2).toUpperCase();
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function(c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
 }
+
+var params = new URLSearchParams(window.location.search);
+var targetUsername = params.get('user'); // null = your own profile
 
 async function loadProfile() {
   var container = document.getElementById('profile-content');
   try {
     var me = (await api('/auth/me')).user;
-    var full = await api('/users/' + me.username);
-    var stats = full.stats;
+    var username = targetUsername || me.username;
+    var full = await api('/users/' + username);
+    var user = full.user, stats = full.stats;
+
+    var avatarBlock = full.isSelf
+      ? '<div class="avatar-wrap" id="avatar-wrap">' + avatarHtml(user, 72) +
+          '<label class="avatar-edit">Change<input type="file" id="avatar-file" accept="image/*" style="display:none;"></label></div>'
+      : avatarHtml(user, 72);
+
+    var actions = '';
+    if (!full.isSelf) {
+      actions += '<div class="profile-actions">';
+      actions += '<button class="btn ' + (full.isFollowing ? 'btn-outline' : 'btn-grad') + '" id="follow-btn">' + (full.isFollowing ? 'Following' : 'Follow') + '</button>';
+      if (full.friendStatus === 'friends') {
+        actions += '<a class="btn btn-outline" href="dms.html?with=' + encodeURIComponent(user.username) + '" style="text-decoration:none;">Message</a>';
+      } else if (full.friendStatus === 'requested') {
+        actions += '<button class="btn btn-outline" disabled>Friend request sent</button>';
+      } else if (full.friendStatus === 'incoming') {
+        actions += '<a class="btn btn-grad" href="friends.html" style="text-decoration:none;">Respond to request</a>';
+      } else {
+        actions += '<button class="btn btn-outline" id="friend-btn">Add friend</button>';
+      }
+      actions += '</div>';
+    }
 
     container.innerHTML =
       '<div class="profile-top">' +
-        '<div class="avatar">' + initials(me.display_name) + '</div>' +
+        avatarBlock +
         '<div>' +
-          '<h2>' + me.display_name + '</h2>' +
-          '<div class="handle">@' + me.username + '</div>' +
-          (me.bio ? '<p style="margin:10px 0 0;font-size:13.3px;">' + me.bio + '</p>' : '') +
+          '<h2>' + escapeHtml(user.display_name) + '</h2>' +
+          '<div class="handle">@' + escapeHtml(user.username) + '</div>' +
+          (user.bio ? '<p style="margin:10px 0 0;font-size:13.3px;">' + escapeHtml(user.bio) + '</p>' : '') +
           '<div class="stats">' +
             '<div><b>' + stats.posts + '</b><span>Posts</span></div>' +
-            '<div><b>' + stats.friends + '</b><span>Friends</span></div>' +
-            '<div><b>' + stats.followers + '</b><span>Followers</span></div>' +
-            '<div><b>' + stats.following + '</b><span>Following</span></div>' +
+            '<button class="stat-btn" data-list="friends"><b>' + stats.friends + '</b><span>Friends</span></button>' +
+            '<button class="stat-btn" data-list="followers"><b>' + stats.followers + '</b><span>Followers</span></button>' +
+            '<button class="stat-btn" data-list="following"><b>' + stats.following + '</b><span>Following</span></button>' +
           '</div>' +
+          actions +
         '</div>' +
       '</div>' +
       '<div class="section-title">Recent posts</div>' +
       '<div id="profile-posts"><div class="empty-state"><p>Loading&hellip;</p></div></div>';
 
+    container.querySelectorAll('.stat-btn').forEach(function(sbtn) {
+      sbtn.addEventListener('click', function() {
+        openListModal(user.username, sbtn.dataset.list);
+      });
+    });
+
+    if (full.isSelf) {
+      document.getElementById('avatar-file').addEventListener('change', async function() {
+        var file = this.files[0];
+        if (!file) return;
+        var form = new FormData();
+        form.append('avatar', file);
+        try {
+          var res = await fetch(API_BASE + '/users/me/avatar', { method: 'POST', credentials: 'include', body: form });
+          var data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Upload failed');
+          loadProfile();
+        } catch (err) { alert(err.message); }
+      });
+    }
+
+    if (!full.isSelf) {
+      var followBtn = document.getElementById('follow-btn');
+      followBtn.addEventListener('click', async function() {
+        followBtn.disabled = true;
+        try {
+          if (full.isFollowing) await api('/follow/' + user.id, { method: 'DELETE' });
+          else await api('/follow/' + user.id, { method: 'POST' });
+          loadProfile();
+        } catch (err) { alert(err.message); followBtn.disabled = false; }
+      });
+      var friendBtn = document.getElementById('friend-btn');
+      if (friendBtn) {
+        friendBtn.addEventListener('click', async function() {
+          friendBtn.disabled = true;
+          try {
+            await api('/friends/request/' + user.id, { method: 'POST' });
+            loadProfile();
+          } catch (err) { alert(err.message); friendBtn.disabled = false; }
+        });
+      }
+    }
+
+    // Posts: only your own feed is fetchable right now, so "recent posts" only populates on your own profile.
+    var postsEl = document.getElementById('profile-posts');
+    if (!full.isSelf) {
+      postsEl.innerHTML = '<div class="empty-state"><p>Posts aren\u2019t viewable here yet.</p><span>Follow or friend them to see their posts in your feed.</span></div>';
+      return;
+    }
+
     var feed = await api('/posts/feed');
     var mine = feed.posts.filter(function(p){ return p.user_id === me.id; });
-    var postsEl = document.getElementById('profile-posts');
 
     if (mine.length === 0) {
       postsEl.innerHTML = '<div class="empty-state"><p>No posts yet.</p><span>Posts you make will show up here.</span></div>';
@@ -281,18 +388,50 @@ async function loadProfile() {
 
     postsEl.innerHTML = '<div class="grid">' + mine.map(function(p){
       return '<div class="pcard">' +
-        '<div class="head"><div class="avatar">' + initials(me.display_name) + '</div>' +
-        '<div><div class="name">' + me.display_name + '</div><div class="meta">' +
+        '<div class="head">' + avatarHtml(me, 34) +
+        '<div><div class="name">' + escapeHtml(me.display_name) + '</div><div class="meta">' +
         new Date(p.created_at).toLocaleDateString() + '</div></div></div>' +
-        '<div class="body">' + (p.body || '') + '</div>' +
+        (p.body ? '<div class="body">' + escapeHtml(p.body) + '</div>' : '') +
       '</div>';
     }).join('') + '</div>';
   } catch (err) {
-    container.innerHTML = '<div class="empty-state"><p>Couldn\u2019t load your profile.</p><span>' + err.message + '</span></div>';
+    container.innerHTML = '<div class="empty-state"><p>Couldn\u2019t load this profile.</p><span>' + err.message + '</span></div>';
   }
 }
 
 loadProfile();
+
+var listLabels = { friends: 'Friends', followers: 'Followers', following: 'Following' };
+
+async function openListModal(username, kind) {
+  var modal = document.getElementById('list-modal');
+  var listEl = document.getElementById('modal-list');
+  document.getElementById('modal-title').textContent = listLabels[kind];
+  listEl.innerHTML = '<div style="font-size:12.5px;color:var(--muted);">Loading&hellip;</div>';
+  modal.classList.add('open');
+
+  try {
+    var data = await api('/users/' + username + '/' + kind);
+    var people = data[kind];
+    listEl.innerHTML = people.length === 0
+      ? '<div style="font-size:12.5px;color:var(--muted);">Nobody here yet.</div>'
+      : people.map(function(p) {
+          return '<a class="mrow" href="profile.html?user=' + encodeURIComponent(p.username) + '">' +
+            avatarHtml(p, 36) +
+            '<div><div class="mname">' + escapeHtml(p.display_name) + '</div><div class="mhandle">@' + escapeHtml(p.username) + '</div></div>' +
+          '</a>';
+        }).join('');
+  } catch (err) {
+    listEl.innerHTML = '<div style="font-size:12.5px;color:var(--muted);">' + err.message + '</div>';
+  }
+}
+
+document.getElementById('modal-close').addEventListener('click', function() {
+  document.getElementById('list-modal').classList.remove('open');
+});
+document.getElementById('list-modal').addEventListener('click', function(e) {
+  if (e.target.id === 'list-modal') e.currentTarget.classList.remove('open');
+});
 </script>
 </body>
 </html>
