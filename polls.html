@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Polls</title>
+<title>PalTube — Polls</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -217,6 +217,10 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
 [data-theme="dark"] .popt{background:#2a2f3f;}
 [data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
@@ -228,8 +232,9 @@ api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
 <div class="wrap">
   <div class="panel">
     <div class="nav-row">
+      <div class="brand-mark"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
       <label class="search">
-        <input type="text" placeholder="Search Relay">
+        <input type="text" placeholder="Search PalTube">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </label>
       <a class="pill" href="index.html">Feed</a>
