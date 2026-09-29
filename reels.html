@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Shorts</title>
+<title>PalTube — Shorts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -195,14 +195,25 @@ a{color:inherit;text-decoration:none;}
 .upload-form.open{display:block;}
 .upload-form input[type="text"]{width:100%;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;margin-bottom:10px;}
 .upload-form input[type="file"]{margin-bottom:10px;font-size:12.5px;color:var(--muted);}
+.reel-feed{
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  max-height:78vh;overflow-y:auto;overflow-x:hidden;
+  scroll-snap-type:y mandatory;
+  padding:6px 4px 24px;
+  scrollbar-width:thin;
+}
+.reel-feed::-webkit-scrollbar{width:6px;}
 .vcard2{
-  background:#000;border-radius:14px;aspect-ratio:9/14;position:relative;overflow:hidden;
+  background:#000;border-radius:14px;position:relative;overflow:hidden;
+  width:min(300px, 100%);aspect-ratio:9/16;flex:none;
+  scroll-snap-align:center;scroll-snap-stop:always;
 }
 .vcard2 video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .vcard2 .who2{position:absolute;bottom:10px;left:10px;right:10px;color:#fff;font-size:11.5px;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none;}
 .vcard2 .reactrow{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:2;}
 .vcard2 .reactrow button{background:rgba(0,0,0,.5);border:none;border-radius:999px;color:#fff;font-size:11px;padding:4px 9px;cursor:pointer;font-weight:600;}
 .vcard2 .reactrow button.on{background:var(--grad);}
+.vcard2 .mute-btn{position:absolute;bottom:10px;right:10px;z-index:2;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:30px;height:30px;color:#fff;cursor:pointer;font-size:13px;}
 .empty-state{
   text-align:center;
   padding:60px 20px;
@@ -221,6 +232,10 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
 [data-theme="dark"] .popt{background:#2a2f3f;}
 [data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
@@ -232,8 +247,9 @@ api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
 <div class="wrap">
   <div class="panel">
     <div class="nav-row">
+      <div class="brand-mark"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
       <label class="search">
-        <input type="text" placeholder="Search Relay">
+        <input type="text" placeholder="Search PalTube">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </label>
       <a class="pill" href="index.html">Feed</a>
@@ -338,9 +354,10 @@ async function loadReels() {
     return;
   }
 
-  container.innerHTML = '<div class="grid">' + reels.map(function(r) {
+  container.innerHTML = '<div class="reel-feed" id="reel-feed">' + reels.map(function(r) {
     return '<div class="vcard2" data-reel-id="' + r.id + '">' +
-      '<video src="' + API_BASE + r.media_path + '" controls playsinline></video>' +
+      '<video src="' + API_BASE + r.media_path + '" muted loop playsinline preload="metadata"></video>' +
+      '<button class="mute-btn" data-muted="true">🔇</button>' +
       '<div class="reactrow">' +
         '<button class="react-btn' + (r.my_reaction === 'like' ? ' on' : '') + '" data-type="like">\u{1F44D} <span>' + r.likes + '</span></button>' +
         '<button class="react-btn' + (r.my_reaction === 'dislike' ? ' on' : '') + '" data-type="dislike">\u{1F44E} <span>' + r.dislikes + '</span></button>' +
@@ -360,6 +377,41 @@ async function loadReels() {
       }
     });
   });
+
+  container.querySelectorAll('.vcard2 video').forEach(function(video) {
+    video.addEventListener('click', function() {
+      if (video.paused) video.play().catch(function(){});
+      else video.pause();
+    });
+  });
+
+  container.querySelectorAll('.mute-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var video = btn.closest('[data-reel-id]').querySelector('video');
+      video.muted = !video.muted;
+      btn.textContent = video.muted ? '🔇' : '🔊';
+    });
+  });
+
+  setupAutoplay();
+}
+
+var reelObserver = null;
+function setupAutoplay() {
+  if (reelObserver) reelObserver.disconnect();
+  reelObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      var video = entry.target.querySelector('video');
+      if (!video) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+        video.play().catch(function(){});
+      } else {
+        video.pause();
+      }
+    });
+  }, { threshold: [0, 0.6, 1] });
+
+  document.querySelectorAll('.vcard2').forEach(function(card) { reelObserver.observe(card); });
 }
 
 api('/auth/me').then(function(r){ currentUser = r.user; loadReels(); });
