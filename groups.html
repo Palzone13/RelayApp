@@ -4,7 +4,7 @@
 <script>try{if(localStorage.getItem('relay-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Relay — Groups</title>
+<title>PalTube — Groups</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -19,7 +19,7 @@
   --line: #e2e4ea;
   --text: #1f2330;
   --muted: #666a76;
-  --grad: linear-gradient(90deg,#3b82f6 0%,#8b5cf6 55%,#c026d3 100%);
+  --grad: linear-gradient(90deg,#ef4444 0%,#f97316 100%);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -197,6 +197,16 @@ a{color:inherit;text-decoration:none;}
 .new-group-form input:focus,.new-group-form textarea:focus{border-color:#8b5cf6;}
 .member-list{margin-top:10px;padding:10px 14px;background:var(--row);border-radius:12px;font-size:12.5px;color:var(--muted);}
 .member-list .m{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;color:var(--text);}
+.group-chat{margin-top:10px;padding:12px;background:var(--row);border-radius:12px;display:none;}
+.group-chat.open{display:block;}
+.group-chat .bubbles2{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding:4px;margin-bottom:10px;}
+.group-chat .bubble3{max-width:75%;font-size:12.8px;line-height:1.4;}
+.group-chat .bubble3.mine{align-self:flex-end;}
+.group-chat .bubble3 .who3{font-size:10.5px;color:var(--muted);margin-bottom:2px;}
+.group-chat .bubble3 .txt{padding:8px 12px;border-radius:14px;background:var(--white);border:1px solid var(--line);}
+.group-chat .bubble3.mine .txt{background:var(--grad);color:#fff;border:none;}
+.group-chat .send-row{display:flex;gap:8px;}
+.group-chat .send-row input{flex:1;background:var(--white);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:12.8px;color:var(--text);font-family:inherit;outline:none;}
 .empty-state{
   text-align:center;
   padding:60px 20px;
@@ -215,6 +225,10 @@ a{color:inherit;text-decoration:none;}
 [data-theme="dark"] .note{background:#1c2240;border-color:#2b3566;color:#b9c4f5;}
 [data-theme="dark"] .popt{background:#2a2f3f;}
 [data-theme="dark"] .panel{box-shadow:0 14px 40px rgba(0,0,0,.45);}
+
+.brand-mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;padding:0 4px 0 0;font-family:'Inter',sans-serif;}
+.brand-mark .play{width:22px;height:22px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex:none;}
+.brand-mark .play svg{width:10px;height:10px;fill:#fff;}
 </style>
 </head>
 <body>
@@ -226,8 +240,9 @@ api('/auth/me').catch(function(){ window.location.href = 'login.html'; });
 <div class="wrap">
   <div class="panel">
     <div class="nav-row">
+      <div class="brand-mark"><div class="play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></div>PalTube</div>
       <label class="search">
-        <input type="text" placeholder="Search Relay">
+        <input type="text" placeholder="Search PalTube">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
       </label>
       <a class="pill" href="index.html">Feed</a>
@@ -289,29 +304,62 @@ document.getElementById('create-group-btn').addEventListener('click', async func
 async function loadGroups() {
   var container = document.getElementById('groups-content');
   var groups = (await api('/groups')).groups;
+  var discover = (await api('/groups/discover')).groups;
 
-  if (groups.length === 0) {
-    container.innerHTML = '<div class="empty-state"><p>No groups yet.</p><span>Groups you create or join will show up here.</span></div>';
-    return;
+  var mineHtml = groups.length === 0
+    ? '<div class="empty-state"><p>No groups yet.</p><span>Groups you create or join will show up here.</span></div>'
+    : '<div class="row-list">' + groups.map(function(g) {
+        return '<div class="row" data-group-id="' + g.id + '" style="flex-direction:column;align-items:stretch;">' +
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+            '<div class="avatar">' + groupInitials(g.name) + '</div>' +
+            '<div class="info"><div class="t1">' + escapeHtml(g.name) + '</div><div class="t2">' + g.member_count + ' member' + (g.member_count == 1 ? '' : 's') + '</div></div>' +
+            '<div class="side"><button class="btn btn-flat open-btn">Open</button></div>' +
+          '</div>' +
+          '<div class="member-list" style="display:none;"></div>' +
+          '<div class="group-chat"><div class="bubbles2"></div><div class="send-row"><input class="chat-input" placeholder="Message the group…"><button class="btn btn-grad chat-send">Send</button></div></div>' +
+        '</div>';
+      }).join('') + '</div>';
+
+  var discoverHtml = '';
+  if (discover.length > 0) {
+    discoverHtml = '<div class="section-title">Discover</div><div class="row-list">' + discover.map(function(g) {
+      return '<div class="row">' +
+        '<div class="avatar">' + groupInitials(g.name) + '</div>' +
+        '<div class="info"><div class="t1">' + escapeHtml(g.name) + '</div><div class="t2">' + g.member_count + ' member' + (g.member_count == 1 ? '' : 's') + (g.description ? ' &middot; ' + escapeHtml(g.description) : '') + '</div></div>' +
+        '<div class="side"><button class="btn btn-grad join-btn" data-group-id="' + g.id + '">Join</button></div>' +
+      '</div>';
+    }).join('') + '</div>';
   }
 
-  container.innerHTML = '<div class="row-list">' + groups.map(function(g) {
-    return '<div class="row" data-group-id="' + g.id + '" style="flex-direction:column;align-items:stretch;">' +
-      '<div style="display:flex;align-items:center;gap:12px;">' +
-        '<div class="avatar">' + groupInitials(g.name) + '</div>' +
-        '<div class="info"><div class="t1">' + escapeHtml(g.name) + '</div><div class="t2">' + g.member_count + ' member' + (g.member_count == 1 ? '' : 's') + '</div></div>' +
-        '<div class="side"><button class="btn btn-flat open-btn">Open</button></div>' +
-      '</div>' +
-      '<div class="member-list" style="display:none;"></div>' +
-    '</div>';
-  }).join('') + '</div>';
+  container.innerHTML = '<div class="section-title">Your groups</div>' + mineHtml + discoverHtml;
+
+  container.querySelectorAll('.join-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      btn.disabled = true;
+      btn.textContent = 'Joining…';
+      try {
+        await api('/groups/' + btn.dataset.groupId + '/join', { method: 'POST' });
+        loadGroups();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+        btn.textContent = 'Join';
+      }
+    });
+  });
 
   container.querySelectorAll('.open-btn').forEach(function(btn) {
     btn.addEventListener('click', async function() {
       var row = btn.closest('[data-group-id]');
       var panel = row.querySelector('.member-list');
-      var open = panel.style.display !== 'none';
-      if (open) { panel.style.display = 'none'; btn.textContent = 'Open'; return; }
+      var chat = row.querySelector('.group-chat');
+      var isOpen = panel.style.display !== 'none';
+      if (isOpen) {
+        panel.style.display = 'none';
+        chat.classList.remove('open');
+        btn.textContent = 'Open';
+        return;
+      }
 
       btn.textContent = 'Loading…';
       var data = await api('/groups/' + row.dataset.groupId);
@@ -320,9 +368,40 @@ async function loadGroups() {
           return '<span class="m">' + escapeHtml(m.display_name) + (m.role !== 'member' ? ' (' + m.role + ')' : '') + '</span>';
         }).join('');
       panel.style.display = 'block';
+      chat.classList.add('open');
       btn.textContent = 'Close';
+
+      await loadGroupChat(row.dataset.groupId, chat.querySelector('.bubbles2'));
+
+      var input = chat.querySelector('.chat-input');
+      var sendBtn = chat.querySelector('.chat-send');
+      var send = async function() {
+        var text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        try {
+          await api('/groups/' + row.dataset.groupId + '/messages', { method: 'POST', body: { body: text } });
+          await loadGroupChat(row.dataset.groupId, chat.querySelector('.bubbles2'));
+        } catch (err) { alert(err.message); }
+      };
+      sendBtn.onclick = send;
+      input.onkeydown = function(e) { if (e.key === 'Enter') send(); };
     });
   });
+}
+
+async function loadGroupChat(groupId, bubblesEl) {
+  var messages = (await api('/groups/' + groupId + '/messages')).messages;
+  var me = (await api('/auth/me')).user;
+  bubblesEl.innerHTML = messages.length === 0
+    ? '<div style="font-size:12px;color:var(--muted);">No messages yet — say hi.</div>'
+    : messages.map(function(m) {
+        var mine = m.user_id === me.id;
+        return '<div class="bubble3' + (mine ? ' mine' : '') + '">' +
+          (mine ? '' : '<div class="who3">' + escapeHtml(m.display_name) + '</div>') +
+          '<div class="txt">' + escapeHtml(m.body) + '</div></div>';
+      }).join('');
+  bubblesEl.scrollTop = bubblesEl.scrollHeight;
 }
 
 loadGroups();
